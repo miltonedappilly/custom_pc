@@ -2,71 +2,86 @@ import { useState, useMemo } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { groupByCategory } from '../utils/excelParser';
 import { checkCompatibility } from '../utils/compatibility';
-import CategorySection from './CategorySection';
-import SummaryPanel from './SummaryPanel';
+import CategoryNav from './CategoryNav';
+import PartsPanel from './PartsPanel';
+import BuildSummary from './BuildSummary';
 
 export default function Configurator({ parts }) {
+  const grouped = useMemo(() => groupByCategory(parts), [parts]);
+  const categories = useMemo(() => Object.keys(grouped), [grouped]);
+
+  const [activeCategory, setActiveCategory] = useState(categories[0] || '');
   const [selected, setSelected] = useState({});
 
-  const grouped = useMemo(() => groupByCategory(parts), [parts]);
-  const categories = Object.keys(grouped);
   const warnings = useMemo(() => checkCompatibility(selected), [selected]);
+  const partCounts = useMemo(() => {
+    const counts = {};
+    for (const cat of categories) counts[cat] = grouped[cat]?.length || 0;
+    return counts;
+  }, [grouped, categories]);
 
-  function handleSelect(category, part) {
+  function handleSelect(part) {
     setSelected((prev) => {
-      if (prev[category]?.id === part.id) {
+      if (prev[activeCategory]?.id === part.id) {
         const next = { ...prev };
-        delete next[category];
+        delete next[activeCategory];
         return next;
       }
-      return { ...prev, [category]: part };
+      return { ...prev, [activeCategory]: part };
     });
   }
 
-  function handleClear() {
-    setSelected({});
-  }
-
-  function handlePrint() {
-    window.print();
+  function handleRemove(cat) {
+    setSelected((prev) => {
+      const next = { ...prev };
+      delete next[cat];
+      return next;
+    });
   }
 
   return (
-    <div className="flex flex-col xl:flex-row gap-6">
-      {/* Left: category sections */}
-      <div className="flex-1 min-w-0 space-y-4">
-        {categories.map((cat) => (
-          <CategorySection
-            key={cat}
-            category={cat}
-            parts={grouped[cat]}
-            selectedPart={selected[cat] || null}
-            onSelect={handleSelect}
-          />
-        ))}
-      </div>
+    <div className="flex h-[calc(100vh-65px)] overflow-hidden">
+      <CategoryNav
+        categories={categories}
+        activeCategory={activeCategory}
+        selected={selected}
+        onSelect={setActiveCategory}
+        partCounts={partCounts}
+      />
 
-      {/* Right: sticky summary */}
-      <div className="xl:w-80 shrink-0 space-y-4">
-        <div className="xl:sticky xl:top-6">
-          {warnings.length > 0 && (
-            <div className="mb-4 bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-2">
-              <div className="flex items-center gap-2 text-amber-700 font-semibold text-sm">
-                <AlertTriangle className="w-4 h-4" />
-                Compatibility Warnings
-              </div>
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        {warnings.length > 0 && (
+          <div className="bg-amber-50 border-b border-amber-200 px-5 py-2.5 flex items-start gap-2">
+            <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+            <div className="space-y-0.5">
               {warnings.map((w, i) => (
-                <p key={i} className="text-xs text-amber-700 leading-relaxed">{w}</p>
+                <p key={i} className="text-xs text-amber-700">{w}</p>
               ))}
             </div>
-          )}
-          <SummaryPanel
-            selected={selected}
-            onClear={handleClear}
-            onPrint={handlePrint}
+          </div>
+        )}
+        {activeCategory && grouped[activeCategory] ? (
+          <PartsPanel
+            category={activeCategory}
+            parts={grouped[activeCategory]}
+            selectedPart={selected[activeCategory] || null}
+            onSelect={handleSelect}
           />
-        </div>
+        ) : (
+          <div className="flex-1 flex items-center justify-center text-slate-400 text-sm">
+            Select a category from the left
+          </div>
+        )}
       </div>
+
+      <BuildSummary
+        selected={selected}
+        categories={categories}
+        activeCategory={activeCategory}
+        onCategoryClick={setActiveCategory}
+        onRemove={handleRemove}
+        onClear={() => setSelected({})}
+      />
     </div>
   );
 }

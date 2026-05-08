@@ -7,7 +7,7 @@ const STORAGE_KEY = 'pc_parts_list';
 
 export default function App() {
   const [parts, setParts] = useState(null);
-  const [view, setView] = useState('configurator'); // 'configurator' | 'admin'
+  const [view, setView] = useState('configurator');
 
   useEffect(() => {
     try {
@@ -29,9 +29,9 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100">
-      <header className="bg-white border-b border-slate-200 shadow-sm print:hidden">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+    <div className="h-screen flex flex-col bg-slate-100 overflow-hidden">
+      <header className="bg-white border-b border-slate-200 shadow-sm print:hidden shrink-0">
+        <div className="px-4 sm:px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-blue-600 rounded-xl">
               <Cpu className="w-5 h-5 text-white" />
@@ -72,9 +72,11 @@ export default function App() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+      <main className="flex-1 overflow-hidden">
         {view === 'admin' ? (
-          <AdminPanel onPartsLoaded={handlePartsLoaded} currentParts={parts} />
+          <div className="h-full overflow-y-auto">
+            <AdminPanel onPartsLoaded={handlePartsLoaded} currentParts={parts} />
+          </div>
         ) : parts ? (
           <Configurator parts={parts} />
         ) : (
